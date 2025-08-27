@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatScreen.css"; // <-- include the plain CSS file with the classes used below
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function ChatScreen() {
   const { state } = useLocation();
+  const navigate = useNavigate(); 
   const { chatSessionId, lang = "Spanish", level } = state || {};
   const [messages, setMessages] = useState([
     {
@@ -20,7 +21,28 @@ export default function ChatScreen() {
   const [userElo, setUserElo] = useState(1600);
   const [botElo, setBotElo] = useState(1600);
   const [eloChange, setEloChange] = useState();
-  const listRef = useRef(null);
+  
+
+    // ---- SCROLL REFS
+    const listRef = useRef(null);       // optional (container)
+    const bottomRef = useRef(null);     // sentinel element
+    const didMountRef = useRef(false);  // detect first render
+  
+    // Smoothly scroll to bottom after each message append / typing state change
+    const scrollToBottom = (behavior = "smooth") => {
+      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    };
+  
+    useEffect(() => {
+      // Instant scroll on first render; smooth after
+      if (!didMountRef.current) {
+        didMountRef.current = true;
+        scrollToBottom("auto");
+      } else {
+        scrollToBottom("smooth");
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [messages.length, isSending]);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -74,16 +96,30 @@ useEffect(() => {
   return () => document.removeEventListener("mousedown", onClickOutside);
 }, []);
 
+// ---- NAV: Profile
 function onProfile() {
-  // TODO: open profile modal / navigate
-  console.log("Profile clicked");
   setMenuOpen(false);
+  // pass any state you want the profile page to know about
+  navigate("/profile", { state: { from: "chat", chatSessionId, lang, level } });
 }
 
-function onLogout() {
-  // TODO: clear auth state, redirect, etc.
-  console.log("Logout clicked");
+// ---- AUTH: Logout (Supabase) + route to /login
+async function onLogout() {
   setMenuOpen(false);
+  try {
+    if (supabase?.auth?.signOut) {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } else {
+      // Fallback: clear any local tokens if you don't use Supabase
+      localStorage.removeItem("auth_token");
+    }
+  } catch (err) {
+    console.error("Logout failed:", err);
+    // Optionally show a toast/snackbar here
+  } finally {
+    navigate("/login");
+  }
 }
 
   const handleSend = async () => {
@@ -109,7 +145,7 @@ function onLogout() {
     setIsSending(true);
     try {
       const data = await postToWebhook(
-        "https://mattwalter2.app.n8n.cloud/webhook-test/b72ad15a-4be2-4888-af94-4c80814eddd3",
+        "https://mattwalter2.app.n8n.cloud/webhook/b72ad15a-4be2-4888-af94-4c80814eddd3",
         {
           message: trimmed,
           lang,
@@ -131,8 +167,8 @@ function onLogout() {
         id: Date.now() + 1,
         role: "bot",
         text: botText,
-        elo: newBotElo,
-        delta: botDelta,
+        elo: botElo,
+
         ts: ts(),
       };
       setMessages((prev) => [...prev, botMsg]);
@@ -253,6 +289,7 @@ function onLogout() {
               </div>
             </div>
           )}
+              <div ref={bottomRef} />
         </div>
 
         {/* Composer */}

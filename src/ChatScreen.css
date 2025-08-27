@@ -12,8 +12,8 @@
   
   /* Card */
   .chat-box {
-    width: 100%;
-    max-width: 780px;
+    width: 85%;                /* span 85% of screen */
+    max-width: none;           /* remove the 780px cap */
     background: rgba(30, 41, 59, 0.85);
     border: 1px solid #1e293b;
     border-radius: 22px;

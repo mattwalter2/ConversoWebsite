@@ -1,0 +1,102 @@
+/* ------ Profile header ------ */
+.ps-profile {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 16px;
+    align-items: start;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  
+  .ps-avatar {
+    display: grid;
+    gap: 10px;
+  }
+
+  /* ProfileScreen.css */
+.ps-chart {
+    height: 360px;            /* or 50vh, etc. */
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    padding: 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  .ps-avatar img,
+  .ps-avatar__fallback {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #e2e8f0;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #0f172a;
+  }
+  
+  .ps-avatar__fallback { user-select: none; }
+  
+  .ps-avatar__actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  
+  .ps-file input[type="file"] { display: none; }
+  .ps-file {
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  /* Meta & launcher */
+  .ps-profile__meta {
+    display: grid;
+    gap: 10px;
+  }
+  
+  .ps-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  
+  .ps-input, .ps-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text);
+    box-sizing: border-box;
+  }
+  
+  .ps-launcher {
+    margin-top: 6px;
+    display: grid;
+    gap: 10px;
+  }
+  
+  .ps-launcher__row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  @media (max-width: 640px) {
+    .ps-profile {
+      grid-template-columns: 1fr;
+    }
+    .ps-launcher__row {
+      grid-template-columns: 1fr;
+    }
+  }

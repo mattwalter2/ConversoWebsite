@@ -6,6 +6,7 @@ import { supabase } from "./supaBaseClient"; // adjust path if needed
 import SelectLanguageScreen from "./SelectLanguageScreen";
 import LoginScreen from "./LoginScreen";
 import ChatScreen from "./ChatScreen"; // <-- import your chat component
+import ProfileScreen from "./ProfileScreen";
 
 // Gate for auth-only routes
 function ProtectedRoute({ session, children }) {
@@ -64,7 +65,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Default to /select when authed */}
-        <Route path="/" element={<Navigate to="/select" replace />} />
+        <Route path="/" element={<Navigate to="/profile" replace />} />
 
         {/* Keep /login for completeness: authed users bounce */}
         <Route path="/login" element={<Navigate to="/select" replace />} />
@@ -84,11 +85,20 @@ export default function App() {
           path="/chat"
           element={
             <ProtectedRoute session={session}>
-              <ChatRoute />
+              <ChatScreen />
             </ProtectedRoute>
           }
         />
 
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute session={session}>
+              <ProfileScreen />
+            </ProtectedRoute>
+          }
+        />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/select" replace />} />
       </Routes>
