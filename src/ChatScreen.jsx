@@ -122,70 +122,78 @@ async function onLogout() {
   }
 }
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || isSending) return;
+const handleSend = async () => {
+  const trimmed = input.trim();
+  if (!trimmed || isSending) return;
 
-    // append user message + ELO
-    const userDelta = randDelta();
-    const newUserElo = userElo + userDelta;
-    setUserElo(newUserElo);
-    const userMsg = {
-      id: Date.now(),
-      role: "user",
-      text: trimmed,
-      elo: newUserElo,
-      delta: userDelta,
+  // append user message
+  const userMsg = {
+    id: Date.now(),
+    role: "user",
+    text: trimmed,
+    elo: userElo,     // don't pre-change elo, wait for webhook
+    delta: 0,
+    ts: ts(),
+  };
+  setMessages((prev) => [...prev, userMsg]);
+  setInput("");
+
+  setIsSending(true);
+  try {
+    const data = await postToWebhook(
+      "https://mattwalter2.app.n8n.cloud/webhook-test/b72ad15a-4be2-4888-af94-4c80814eddd3",
+      {
+        message: trimmed,
+        lang,
+        userElo,
+        botElo,
+        history: [...messages, userMsg].slice(-10).map(({ role, text }) => ({ role, text })),
+        chatSessionId,
+      }
+    );
+
+    // Extract bot text safely
+    const rawText =
+      typeof data === "string"
+        ? data
+        : (data?.text_response ?? data?.reply ?? "(no reply)");
+    const botText = (rawText ?? "").toString().trim();
+
+    // Inline null checks for grading values
+    const ratingChange = data?.rating_change !== undefined ? Number(data.rating_change) : null;
+    const newUserRating = data?.new_rating !== undefined ? Number(data.new_rating) : null;
+    const newBotRating  = data?.bot_new_rating !== undefined ? Number(data.bot_new_rating) : null;
+
+    // Only show eloChange if grading happened
+    setEloChange(ratingChange ?? undefined);
+
+    // Update ratings if webhook provided them
+    if (newUserRating !== null) setUserElo(newUserRating);
+    if (newBotRating  !== null) setBotElo(newBotRating);
+
+    const botMsg = {
+      id: Date.now() + 1,
+      role: "bot",
+      text: botText,
+      elo: newBotRating !== null ? newBotRating : botElo,
+      delta: 0,
       ts: ts(),
     };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-
-    // webhook → agent reply
-    setIsSending(true);
-    try {
-      const data = await postToWebhook(
-        "https://mattwalter2.app.n8n.cloud/webhook/b72ad15a-4be2-4888-af94-4c80814eddd3",
-        {
-          message: trimmed,
-          lang,
-          userElo: newUserElo,
-          botElo,
-          history: messages.slice(-10).map(({ role, text }) => ({ role, text })),
-          chatSessionId,
-        }
-      );
-
-      // Extract the agent's reply (supports string or { text_response } or { reply })
-      const botText =
-        (typeof data === "string" ? data : (data?.text_response ?? data?.reply))?.toString().trim() ||
-        "(no reply)";
-
-      setEloChange(data?.rating_change);
-
-      const botMsg = {
-        id: Date.now() + 1,
-        role: "bot",
-        text: botText,
-        elo: botElo,
-
-        ts: ts(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (err) {
-      const botMsg = {
-        id: Date.now() + 2,
-        role: "bot",
-        text: `Webhook error: ${err.message}`,
-        elo: botElo,
-        delta: 0,
-        ts: ts(),
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    } finally {
-      setIsSending(false);
-    }
-  };
+    setMessages((prev) => [...prev, botMsg]);
+  } catch (err) {
+    const botMsg = {
+      id: Date.now() + 2,
+      role: "bot",
+      text: `Webhook error: ${err.message}`,
+      elo: botElo,
+      delta: 0,
+      ts: ts(),
+    };
+    setMessages((prev) => [...prev, botMsg]);
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
