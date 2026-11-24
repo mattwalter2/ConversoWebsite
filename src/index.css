@@ -1,0 +1,152 @@
+/* Converso: shared theme + building blocks used across screens. */
+:root {
+  --bg: #0f1221;
+  --card: #131731;
+  --card-2: #0f132b;
+  --muted: #8b94b8;
+  --text: #e9ecff;
+  --text-2: #c7ceff;
+  --primary: #6ee7b7;
+  --primary-strong: #10b981;
+  --primary-ink: #0e1b16;
+  --stroke: #21254a;
+  --stroke-2: #2a2f5a;
+  --danger: #f87171;
+  --warn: #fbbf24;
+  --info: #93c5fd;
+  --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { width: 100%; min-height: 100%; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; }
+
+/* Page shell */
+.cv-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(110, 231, 183, 0.07), transparent 50%),
+    radial-gradient(900px 500px at 90% 110%, rgba(100, 116, 255, 0.06), transparent 50%),
+    var(--bg);
+}
+.cv-container { width: min(1040px, 100%); margin: 0 auto; padding: 24px 20px 48px; }
+
+.cv-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--stroke);
+  background: rgba(15, 18, 33, 0.85); backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 20;
+}
+.cv-topbar__brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; }
+.cv-topbar__spacer { flex: 1; }
+
+.cv-badge {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  font-weight: 800; color: var(--primary-ink);
+  background: linear-gradient(180deg, var(--primary), #4ade80);
+}
+
+.cv-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)), var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.cv-card__title { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+
+.cv-h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 0.2px; }
+.cv-muted { color: var(--muted); }
+.cv-small { font-size: 13px; }
+
+/* Buttons */
+.cv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid var(--stroke); background: var(--card-2); color: var(--text);
+  font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.cv-btn:hover:not(:disabled) { background: #161b3b; border-color: var(--stroke-2); }
+.cv-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.cv-btn--primary {
+  background: linear-gradient(180deg, #34d399, var(--primary-strong));
+  border-color: #0ea37f; color: #071913;
+}
+.cv-btn--primary:hover:not(:disabled) { filter: brightness(1.05); background: linear-gradient(180deg, #34d399, var(--primary-strong)); }
+.cv-btn--ghost { background: transparent; }
+.cv-btn--sm { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+.cv-btn--lg { height: 48px; padding: 0 22px; font-size: 16px; }
+.cv-icon-btn {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  border: 1px solid var(--stroke); background: var(--card-2); color: var(--text-2); cursor: pointer;
+}
+.cv-icon-btn:hover { background: #161b3b; }
+
+/* Segmented control */
+.cv-segment { display: inline-flex; background: var(--card-2); border: 1px solid var(--stroke); border-radius: 12px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+.cv-segment button {
+  border: 1px solid transparent; background: transparent; color: #b9c0e6;
+  padding: 7px 12px; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.cv-segment button.is-active { background: #1a1f3f; color: #f0f3ff; border-color: var(--stroke-2); }
+
+/* Inputs */
+.cv-input {
+  appearance: none; width: 100%;
+  background: var(--card-2); color: #f3f4ff;
+  border: 1px solid var(--stroke); border-radius: 12px;
+  padding: 11px 14px; outline: none; font: inherit;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+.cv-input:focus { border-color: #5eead4; box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.15); }
+
+/* Feedback */
+.cv-error {
+  border: 1px solid rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.08);
+  color: #fecaca; border-radius: 12px; padding: 10px 12px; font-size: 14px;
+}
+.cv-notice {
+  border: 1px solid rgba(110, 231, 183, 0.3); background: rgba(110, 231, 183, 0.07);
+  color: #c9f7e4; border-radius: 12px; padding: 10px 12px; font-size: 14px;
+}
+.cv-loading { min-height: 100vh; display: grid; place-items: center; color: var(--muted); }
+
+.pos { color: #34d399; }
+.neg { color: var(--danger); }
+
+.cv-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25); border-top-color: currentColor;
+  animation: cv-spin 0.8s linear infinite; display: inline-block;
+}
+@keyframes cv-spin { to { transform: rotate(360deg); } }
+
+/* Top bar navigation, streak */
+.cv-nav { display: flex; gap: 4px; }
+.cv-nav__link {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-weight: 600; font-size: 14px; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+}
+.cv-nav__link:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.cv-nav__link.is-active { color: var(--text); background: rgba(110, 231, 183, 0.1); }
+.cv-nav__count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  display: inline-grid; place-items: center; color: var(--primary-ink); background: var(--primary);
+}
+.cv-streak {
+  font-weight: 800; font-size: 14px; padding: 5px 10px; border-radius: 999px;
+  background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.35); color: #fde68a;
+}
+.cv-streak.is-pending { opacity: 0.65; border-style: dashed; }
+@media (max-width: 640px) { .cv-nav__link { padding: 6px 8px; } }

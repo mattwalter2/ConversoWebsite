@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local env (Supabase URL + anon key)
+.env
+
+# Deno lockfile created by running tests from the project root
+/deno.lock

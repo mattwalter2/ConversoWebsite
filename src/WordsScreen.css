@@ -1,0 +1,34 @@
+.wd { display: grid; gap: 18px; max-width: 760px; }
+.wd-head { display: grid; gap: 4px; }
+.wd-head p { margin: 0; }
+.wd-empty { display: grid; gap: 12px; justify-items: start; }
+.wd-empty p { margin: 0; }
+.wd-done { font-size: 22px; font-weight: 800; }
+
+.wd-card { display: grid; gap: 14px; text-align: center; padding: 22px; }
+.wd-card__top { display: flex; justify-content: space-between; align-items: center; }
+.wd-source { font-size: 12px; color: var(--muted); }
+.wd-word { font-size: 40px; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.wd-say { border: 0; background: transparent; cursor: pointer; font-size: 20px; opacity: 0.7; }
+.wd-say:hover { opacity: 1; }
+.wd-example { margin: 0; color: var(--text-2); font-style: italic; }
+.wd-example mark { background: rgba(110, 231, 183, 0.18); color: var(--text); border-radius: 4px; padding: 0 3px; font-style: normal; }
+.wd-reveal { justify-self: center; min-width: 220px; }
+.wd-answer { font-size: 24px; font-weight: 700; color: var(--primary); }
+.wd-grades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.wd-grade {
+  display: grid; gap: 2px; padding: 10px; border-radius: 12px; cursor: pointer; font: inherit; font-weight: 700;
+  color: var(--text); background: var(--card-2); border: 1px solid var(--stroke-2);
+}
+.wd-grade:hover { transform: translateY(-1px); }
+.wd-grade__when { font-size: 12px; font-weight: 500; color: var(--muted); }
+.wd-grade--again { border-color: rgba(248, 113, 113, 0.45); }
+.wd-grade--good { border-color: rgba(110, 231, 183, 0.45); }
+.wd-grade--easy { border-color: rgba(147, 197, 253, 0.45); }
+
+.wd-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto auto; gap: 8px 14px; align-items: center; }
+.wd-list__es { font-weight: 700; overflow-wrap: anywhere; }
+.wd-list__en { overflow-wrap: anywhere; }
+.wd-list__due { white-space: nowrap; }
+.wd-list__forget { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 6px; }
+.wd-list__forget:hover { color: #fca5a5; background: rgba(248, 113, 113, 0.1); }
