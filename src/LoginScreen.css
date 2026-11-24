@@ -1,20 +1,4 @@
-:root{
-    --bg:#0f1221;
-    --card:#131731;
-    --muted:#8b94b8;
-    --text:#e9ecff;
-    --primary:#6ee7b7;
-    --primary-ink:#0e1b16;
-    --stroke:#21254a;
-    --stroke-2:#2a2f5a;
-    --shadow: 0 20px 40px rgba(0,0,0,.35);
-  }
-  
-  *{box-sizing:border-box}
-  
-  body { background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-  
-  .cv-auth{
+.cv-auth{
     min-height:100vh;
     display:grid;
     place-items:center;
@@ -98,6 +82,7 @@
   .cv-input:focus{ border-color:#5eead4; box-shadow:0 0 0 3px rgba(94,234,212,.15); }
   
   .cv-form__row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .cv-form__row--end{ justify-content:flex-end; }
   .cv-check{ display:flex; align-items:center; gap:8px; font-size:13px; color:#cbd2ff; }
   .cv-check--terms{ margin-top:2px; }
   
@@ -133,3 +118,6 @@
   .cv-auth__legal{
     font-size:12px; color:#8c95bf; margin-top:18px; text-align:center;
   }
+
+.cv-auth__card--single{ width:min(460px, 100%); grid-template-columns: 1fr; }
+.cv-input option{ background:#0f132b; color:#f3f4ff; }

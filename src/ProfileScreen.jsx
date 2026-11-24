@@ -1,302 +1,372 @@
-// ProfileScreen.jsx
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
   CartesianGrid,
+  Line,
+  LineChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
 } from "recharts";
 import "./ProfileScreen.css";
+import TopBar from "./TopBar";
+import {
+  forgetAllMemory,
+  forgetMemory,
+  getCompletedSessions,
+  getEloHistory,
+  getMemory,
+  getProfile,
+  getTopicRatings,
+  getWords,
+  updateProfile,
+} from "./api";
+import { SKILLS, TOPICS, levelName, topicOf } from "./spanish";
+import { dayStreak } from "../supabase/functions/_shared/streak.ts";
 
-/**
- * ProfileScreen (User-only ELO + Profile + Language launcher)
- *
- * Props:
- *  - messages: Array<{ id, role, elo?, delta?, ts }>
- *  - userName?: string                 // fallback initial name
- *  - initialAvatarUrl?: string         // optional avatar URL to prefill
- *
- * If messages is empty, generates a deterministic random-walk (user only).
- */
-export default function ProfileScreen({
-  messages = [],
-  userName = "You",
-  initialAvatarUrl = "",
-}) {
+const DAY = 24 * 3600 * 1000;
+const RANGES = { "7d": 7 * DAY, "30d": 30 * DAY, all: Infinity };
+const ACCENT = "#6ee7b7";
+const AXIS = "#8b94b8";
+const GRID = "#21254a";
+
+const fmtDay = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+export default function ProfileScreen() {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [error, setError] = useState("");
+  const [range, setRange] = useState("30d");
+  const [memory, setMemory] = useState([]);
+  const [topicRatings, setTopicRatings] = useState({});
+  const [wordCount, setWordCount] = useState(0);
+  const [confirmForget, setConfirmForget] = useState(false);
 
-  // -------- Profile state --------
-  const [displayName, setDisplayName] = useState(userName);
-  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
+  const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // -------- Language launcher --------
-  const LANGS = [
-    "Spanish",
-    "French",
-    "German",
-    "Italian",
-    "Portuguese",
-    "Japanese",
-    "Korean",
-    "Chinese",
-    "Arabic",
-    "Russian",
-  ];
-  const [lang, setLang] = useState(LANGS[0]);
+  useEffect(() => {
+    Promise.all([getProfile(), getEloHistory(), getCompletedSessions(), getMemory(), getTopicRatings(), getWords()])
+      .then(([p, h, s, m, t, w]) => {
+        if (!p) throw new Error("Your profile is missing. Try signing out and back in.");
+        setProfile(p);
+        setHistory(h);
+        setSessions(s);
+        setMemory(m);
+        setTopicRatings(t);
+        setWordCount(w.length);
+        setName(p?.display_name ?? "");
+        setAvatar(p?.avatar_url ?? "");
+      })
+      .catch((e) => setError(e.message));
+  }, []);
 
-  const onStartChat = () => {
-    // Persist like your app expects
-    try {
-      localStorage.setItem("converso.lang", JSON.stringify({ name: lang }));
-    } catch {}
-    navigate("/chat");
-  };
-
-  // Support avatar from URL or local file
-  const onAvatarFile = (file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => setAvatarUrl(String(e.target?.result || ""));
-    reader.readAsDataURL(file);
-  };
-
-  // -------- Chart logic (user ELO only) --------
-  const [range, setRange] = useState("30d"); // "7d" | "30d" | "all"
-  const toDate = (t) => (t instanceof Date ? t : new Date(t ?? Date.now()));
-  const labelDate = (d) =>
-    d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-  function mulberry32(seed) {
-    return function () {
-      let t = (seed += 0x6d2b79f5);
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function strSeed(s) {
-    let h = 2166136261 >>> 0;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
-  }
-
-  const sampleMessages = useMemo(() => {
-    const N = 45;
-    const now = new Date();
-    const seed = strSeed(String(displayName || "You"));
-    const rnd = mulberry32(seed);
-    let userElo = 1500 + Math.floor(rnd() * 100) - 50;
-
-    const out = [];
-    for (let i = N - 1; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(now.getDate() - i);
-
-      const uDelta = Math.round((rnd() - 0.5) * 20 + (1500 - userElo) * 0.02);
-      userElo += uDelta;
-
-      const ts = new Date(date);
-      ts.setHours(9, 0, 0, 0);
-      out.push({
-        id: `${date.toISOString()}-u`,
-        role: "user",
-        elo: userElo,
-        delta: uDelta,
-        ts: ts.toISOString(),
-      });
-    }
-    return out;
-  }, [displayName]);
-
-  const inputMessages =
-    messages && messages.length > 0
-      ? messages.filter((m) => m.role === "user")
-      : sampleMessages;
-
+  // Overall Elo over time, with a synthetic first point at the pre-first-session rating.
   const series = useMemo(() => {
-    const rows = (inputMessages || [])
-      .filter((m) => typeof m.elo === "number" && m.ts != null)
-      .map((m) => ({
-        dt: toDate(m.ts),
-        elo: m.elo,
-      }))
-      .sort((a, b) => a.dt - b.dt);
+    if (!history.length) return [];
+    const first = history[0];
+    const firstAt = new Date(first.created_at).getTime();
+    return [
+      { t: firstAt - 60_000, elo: first.new_elo - first.delta },
+      ...history.map((h) => ({ t: new Date(h.created_at).getTime(), elo: h.new_elo })),
+    ].map((p) => ({ ...p, label: fmtDay(new Date(p.t)) }));
+  }, [history]);
 
-    return rows.map((r) => ({
-      date: r.dt,
-      label: labelDate(r.dt),
-      userElo: r.elo,
-    }));
-  }, [inputMessages]);
-
-  const filtered = useMemo(() => {
-    if (!series.length || range === "all") return series;
-    const now = new Date().getTime();
-    const windowMs =
-      range === "7d" ? 7 * 24 * 3600 * 1000 : 30 * 24 * 3600 * 1000;
-    const since = now - windowMs;
-    return series.filter((p) => p.date.getTime() >= since);
+  const visible = useMemo(() => {
+    const since = Date.now() - RANGES[range];
+    const inRange = series.filter((p) => p.t >= since);
+    return inRange.length >= 2 ? inRange : series.slice(-Math.max(2, inRange.length));
   }, [series, range]);
 
-  const first = filtered[0];
-  const last = filtered[filtered.length - 1];
-  const userChange =
-    first && last && first.userElo != null && last.userElo != null
-      ? last.userElo - first.userElo
-      : 0;
+  const radar = useMemo(
+    () => (profile ? SKILLS.map((s) => ({ skill: s.label, elo: profile[`${s.key}_elo`] })) : []),
+    [profile],
+  );
+  const radarMax = Math.max(800, Math.ceil(Math.max(0, ...radar.map((r) => r.elo)) / 400) * 400);
 
-  // Initials fallback for avatar
+  const streak = dayStreak(sessions.map((s) => s.ended_at));
+  const scored = sessions.filter((s) => s.accuracy != null);
+  const avgAccuracy = scored.length
+    ? `${Math.round(scored.reduce((n, s) => n + s.accuracy, 0) / scored.length)}%`
+    : "—";
+  const dirty = profile && (name !== (profile.display_name ?? "") || avatar !== (profile.avatar_url ?? ""));
+
+  async function onForget(id) {
+    const prev = memory;
+    setMemory((m) => m.filter((x) => x.id !== id)); // optimistic
+    try {
+      await forgetMemory(id);
+    } catch (err) {
+      setMemory(prev);
+      setError(err.message);
+    }
+  }
+
+  async function onForgetAll() {
+    const prev = memory;
+    setMemory([]);
+    setConfirmForget(false);
+    try {
+      await forgetAllMemory();
+    } catch (err) {
+      setMemory(prev);
+      setError(err.message);
+    }
+  }
+
+  async function onSave(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const p = await updateProfile({ display_name: name.trim() || null, avatar_url: avatar.trim() || null });
+      setProfile(p);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!profile && !error) return <div className="cv-loading">Cargando…</div>;
+
   const initials =
-    (displayName || "You")
+    (profile?.display_name || "Tú")
       .split(" ")
       .map((s) => s[0])
       .filter(Boolean)
       .slice(0, 2)
       .join("")
-      .toUpperCase() || "U";
+      .toUpperCase();
 
   return (
-    <div className="profile-screen profile-screen--full">
-      {/* Profile header */}
-      <div className="ps-profile">
-        <div className="ps-avatar">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" />
-          ) : (
-            <div className="ps-avatar__fallback">{initials}</div>
-          )}
-          <div className="ps-avatar__actions">
-            <input
-              type="url"
-              placeholder="Paste image URL"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              className="ps-input"
-            />
-            <label className="ps-file">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onAvatarFile(e.target.files?.[0])}
-              />
-              Upload
-            </label>
-          </div>
-        </div>
+    <div className="cv-page">
+      <TopBar />
 
-        <div className="ps-profile__meta">
-          <label className="ps-label">Display name</label>
-          <input
-            className="ps-input"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Your name"
-          />
+      <div className="cv-container ps">
+        {error && <div className="cv-error">{error}</div>}
 
-          <div className="ps-launcher">
-            <div className="ps-launcher__row">
-              <label className="ps-label" htmlFor="lang">
-                Practice language
-              </label>
-              <select
-                id="lang"
-                className="ps-select"
-                value={lang}
-                onChange={(e) => setLang(e.target.value)}
-              >
-                {LANGS.map((L) => (
-                  <option key={L} value={L}>
-                    {L}
-                  </option>
-                ))}
-              </select>
+        {profile && (
+          <>
+            <section className="cv-card ps-hero">
+              <div className="ps-avatar">
+                {profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{initials}</span>}
+              </div>
+              <form className="ps-identity" onSubmit={onSave}>
+                <input
+                  className="cv-input ps-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  aria-label="Display name"
+                />
+                <input
+                  className="cv-input"
+                  type="url"
+                  value={avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                  placeholder="Avatar image URL (optional)"
+                  aria-label="Avatar image URL"
+                />
+                <div className="ps-identity__row">
+                  {dirty && (
+                    <button className="cv-btn cv-btn--sm" type="submit" disabled={saving}>
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  )}
+                  {saved && <span className="cv-small pos">Saved</span>}
+                </div>
+              </form>
+              <div className="ps-elo">
+                <div className="ps-elo__value">{profile.overall_elo}</div>
+                <div className="ps-elo__label">Elo · {levelName(profile.overall_elo)}</div>
+                <button className="cv-btn cv-btn--primary" onClick={() => navigate("/practice")}>
+                  Start practice
+                </button>
+              </div>
+            </section>
+
+            <section className="ps-stats">
+              <Stat label="Sessions" value={sessions.length} />
+              <Stat label="Day streak" value={`🔥 ${streak.days}`} />
+              <Stat label="Words" value={wordCount} />
+              <Stat label="Avg accuracy" value={avgAccuracy} />
+            </section>
+
+            <div className="ps-charts">
+              <section className="cv-card">
+                <div className="ps-card-head">
+                  <h2 className="cv-card__title">Elo history</h2>
+                  <div className="cv-segment">
+                    {Object.keys(RANGES).map((r) => (
+                      <button key={r} className={range === r ? "is-active" : ""} onClick={() => setRange(r)}>
+                        {r === "all" ? "All" : r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {series.length ? (
+                  <div className="ps-chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={visible} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
+                        <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
+                        <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 12 }} minTickGap={24} />
+                        <YAxis stroke={AXIS} tick={{ fontSize: 12 }} domain={["dataMin - 20", "dataMax + 20"]} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ background: "#11152e", border: "1px solid #2a2f5a", borderRadius: 10 }}
+                          labelStyle={{ color: "#c7ceff" }}
+                          formatter={(v) => [v, "Elo"]}
+                        />
+                        <Line type="monotone" dataKey="elo" stroke={ACCENT} strokeWidth={2.5} dot={{ r: 3, fill: ACCENT }} isAnimationActive={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <Empty>Finish your first session to start your Elo chart.</Empty>
+                )}
+              </section>
+
+              <section className="cv-card">
+                <h2 className="cv-card__title">Skills</h2>
+                <div className="ps-chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={radar} outerRadius="72%">
+                      <PolarGrid stroke={GRID} />
+                      <PolarAngleAxis dataKey="skill" tick={{ fill: "#c7ceff", fontSize: 12 }} />
+                      <PolarRadiusAxis domain={[0, radarMax]} tick={false} axisLine={false} />
+                      <Tooltip
+                        contentStyle={{ background: "#11152e", border: "1px solid #2a2f5a", borderRadius: 10 }}
+                        formatter={(v) => [v, "Elo"]}
+                      />
+                      <Radar dataKey="elo" stroke={ACCENT} fill={ACCENT} fillOpacity={0.25} isAnimationActive={false} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
             </div>
 
-            <button className="ps-btn ps-btn--primary" onClick={onStartChat}>
-              Start Chat in {lang}
-            </button>
-          </div>
-        </div>
-      </div>
+            <section className="cv-card">
+              <h2 className="cv-card__title">Elo by topic</h2>
+              <ul className="ps-topics">
+                {TOPICS.map((t) => {
+                  const r = topicRatings[t.key];
+                  return (
+                    <li key={t.key}>
+                      <span className="ps-topics__name">
+                        <span aria-hidden>{t.emoji}</span> {t.label}
+                      </span>
+                      <span className="ps-topics__bar" aria-hidden>
+                        {r && <span style={{ width: `${Math.max(3, (r.elo / 2400) * 100)}%` }} />}
+                      </span>
+                      <span className="ps-topics__elo">
+                        {r ? <>{r.elo} <span className="cv-muted cv-small">· {r.sessions} session{r.sessions === 1 ? "" : "s"}</span></> : <span className="cv-muted cv-small">Not played yet</span>}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
 
-      {/* Header + controls */}
-      <div className="ps-header">
-        <h2 className="ps-title">ELO History</h2>
-        <div className="ps-controls">
-          <div className="ps-range">
-            <button
-              className={`ps-btn ${range === "7d" ? "ps-btn--primary" : ""}`}
-              onClick={() => setRange("7d")}
-            >
-              7d
-            </button>
-            <button
-              className={`ps-btn ${range === "30d" ? "ps-btn--primary" : ""}`}
-              onClick={() => setRange("30d")}
-            >
-              30d
-            </button>
-            <button
-              className={`ps-btn ${range === "all" ? "ps-btn--primary" : ""}`}
-              onClick={() => setRange("all")}
-            >
-              All
-            </button>
-          </div>
-        </div>
-      </div>
+            <section className="cv-card">
+              <div className="ps-card-head">
+                <h2 className="cv-card__title">What Mateo remembers</h2>
+                {memory.length > 0 &&
+                  (confirmForget ? (
+                    <div className="ps-forget">
+                      <span className="cv-small cv-muted">Forget everything?</span>
+                      <button className="cv-btn cv-btn--sm" onClick={onForgetAll}>Yes, forget</button>
+                      <button className="cv-btn cv-btn--sm" onClick={() => setConfirmForget(false)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button className="cv-btn cv-btn--sm" onClick={() => setConfirmForget(true)}>Forget everything</button>
+                  ))}
+              </div>
+              {memory.length ? (
+                <div className="ps-memory">
+                  <MemoryList title="About you" items={memory.filter((m) => m.kind === "fact")} onForget={onForget} />
+                  <MemoryList title="Mistakes he's helping with" items={memory.filter((m) => m.kind === "mistake")} onForget={onForget} />
+                </div>
+              ) : (
+                <Empty>Chat with Mateo and he'll remember things you tell him, like your job or plans, and the mistakes you keep making.</Empty>
+              )}
+            </section>
 
-      {/* Stats */}
-      <div className="ps-stats">
-        <div className="ps-stat">
-          <div className="ps-stat__label">
-            {displayName || "You"} change ({range})
-          </div>
-          <div className={`ps-stat__value ${userChange >= 0 ? "pos" : "neg"}`}>
-            {userChange >= 0 ? "+" : ""}
-            {Math.round(userChange)}
-          </div>
-        </div>
-        <div className="ps-stat">
-          <div className="ps-stat__label">{displayName || "You"} latest</div>
-          <div className="ps-stat__value">{last?.userElo ?? "—"}</div>
-        </div>
-      </div>
-
-      {/* Chart */}
-      <div className="ps-chart">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={filtered}
-            margin={{ top: 16, right: 24, bottom: 8, left: 8 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" minTickGap={24} />
-            <YAxis allowDecimals={false} />
-            <Tooltip
-              formatter={(value, name) => {
-                if (name === "userElo")
-                  return [value, `${displayName || "You"} ELO`];
-                return [value, name];
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="userElo"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+            <section className="cv-card">
+              <h2 className="cv-card__title">Recent sessions</h2>
+              {sessions.length ? (
+                <ul className="ps-sessions">
+                  {sessions.slice(0, 10).map((s) => {
+                    const t = topicOf(s.topic);
+                    const d = s.overall_delta ?? 0;
+                    return (
+                      <li key={s.id} onClick={() => navigate(`/chat/${s.id}`)}>
+                        <span className="ps-sessions__emoji" aria-hidden>{t.emoji}</span>
+                        <div className="ps-sessions__body">
+                          <div className="ps-sessions__top">
+                            <strong>{t.label}</strong>
+                            <span className="cv-small cv-muted">{fmtDay(new Date(s.ended_at))}</span>
+                          </div>
+                          {s.summary && <div className="cv-small cv-muted ps-sessions__summary">{s.summary}</div>}
+                        </div>
+                        <span className={`ps-delta ${d > 0 ? "pos" : d < 0 ? "neg" : ""}`}>{d > 0 ? `+${d}` : d}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <Empty>No sessions yet. ¡Vamos! Start your first chat with Mateo.</Empty>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="cv-card ps-stat">
+      <div className="ps-stat__value">{value}</div>
+      <div className="ps-stat__label">{label}</div>
+    </div>
+  );
+}
+
+function MemoryList({ title, items, onForget }) {
+  return (
+    <div>
+      <h3 className="ps-memory__title">{title}</h3>
+      {items.length ? (
+        <ul className="ps-memory__list">
+          {items.map((m) => (
+            <li key={m.id}>
+              <span>{m.content}</span>
+              <button className="ps-memory__forget" onClick={() => onForget(m.id)} aria-label={`Forget: ${m.content}`} title="Forget this">
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="cv-small cv-muted">Nothing yet.</p>
+      )}
+    </div>
+  );
+}
+
+function Empty({ children }) {
+  return <div className="ps-empty cv-muted">{children}</div>;
 }
